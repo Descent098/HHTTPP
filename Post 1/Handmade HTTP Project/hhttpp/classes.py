@@ -38,7 +38,7 @@ Any useful examples of basic usage of this module, make sure to enclose code in 
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Literal, List, Union
 
 @dataclass
 class Request:
@@ -71,23 +71,54 @@ class Response:
 @dataclass
 class Server:
     # Used to represent an overall HTTP server
-    proxy_directory:str
+    proxy_directory:str = "."
+    error_on_4xx: bool = False # Should raise a python error on 4xx status codes
+    error_on_5xx: bool = True # Should raise a python error on 5xx status codes
+    logs: List[Union[Request, Response]] = field(default_factory=lambda:[])
     
     def parse_request(self, input_text:str) -> Request:
         # TODO: Parse input text to generate Request object
-        return Request("schulichignite.com", "/", "GET")
+        result = Request("schulichignite.com", "/", "GET")
+        if len(self.logs) >=500:
+            print("500 or more, popping value")
+            self.logs.pop()
+        self.logs.append(result)
+        return result
         
     def generate_response(self, request: Request) -> Response:
         # TODO: Locate resource, setup status code etc.
         headers = {"hostname": request.hostname}
         content = "<html><head><title>Hello World</title></head><body><h1>Hello World</h1></body></html>"
-        return Response(StatusCode(200, "Ok"), headers, content)
+        
+        # TODO: Pick status code
+        status_code = StatusCode(200, "Ok")
+        # status_code = StatusCode(404, "Not Found")
+        # status_code = StatusCode(500, "Internal Server Error")
+        # TODO: Create response object
+        result = Response(status_code, headers, content)
+        if self.error_on_4xx and (399<status_code.value<500):
+            raise ValueError(f"Recieved client error status code '{status_code}: {status_code.description}' on request: {request}")
+            
+        if self.error_on_5xx and (499<status_code.value<600):
+            raise ValueError(f"Recieved server error status code {status_code} on request: {request}")
+
+        if len(self.logs) >=500:
+            self.logs.pop()
+        self.logs.append(result)
+        return result
     
     def send_request(self, request:Request) -> Response:
         # TODO: Network send the request and get a reponse
         return self.generate_response(request)
 
 if __name__ == "__main__": # Code inside this statement will only run if the file is explicitly called and not just imported.
+    
+    s = Server()
+    for _ in range(600):
+        s.generate_response(s.parse_request(""))
+    
+    print(len(s.logs))
     ok = StatusCode(200, "OK")
-    print(Request("schulichignite.com", "/"))
-    print(Response(ok))
+    # print(Request("schulichignite.com", "/"))
+    # print(Response(ok))
+    print(s)
