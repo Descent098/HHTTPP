@@ -1,13 +1,13 @@
 # Handmade HTTP Project (HHTTPP)
 ## Free range artisnal HTTP
 
-A simple HTTP server designed for educational purposes.
+A simple HTTP proxy server designed for educational purposes.
 
 ---
 **THIS SYSTEM IS NOT DESIGNED FOR PRODUCTION USE**
 ---
 
-The overall goal with the project is to create a simple HTTP proxy server that will allow you to access the files in a given folder (called the proxy folder) over HTTP. It is **not** designed to be a framework with routing, or any other fancy features. 
+The overall goal with the project is to create a simple [HTTP proxy server](#what-is-an-http-proxy). It is **not** designed to be a framework with routing, or any other fancy features. 
 
 On top of that, there are a few caveats:
 
@@ -15,6 +15,20 @@ On top of that, there are a few caveats:
 2. It will only support a portion of the HTTP response codes
 3. It will not have optimizations like caching or multithreading
 
+
+## What is an HTTP proxy? (TODO)
+
+A proxy server in this context is a server that will allow you to access the files in a given folder (called the proxy folder) over HTTP. So essentially when you access a URL on the Proxy it will treat the slug as a path to a file. So for example if you have a proxy folder:
+
+```
+📁proxy_folder/
+├── 📁blog/
+│   └── 📄how-to-make-alfredo.html
+└── 📄 about.html
+```
+Then if it's proxied to `ignite.com` if you go to `ignite.com/about` it will send you the contents of `proxy_folder/about.html` over HTTP. Same thing if you went to `ignite.com/blog/how-to-make-alfredo.html` would give you the content of `proxy_folder/blog/how-to-make-alfredo.html` via HTTP: 
+
+![](./images/proxy-basics.png)
 
 ## Order of development
 
