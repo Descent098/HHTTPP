@@ -1,0 +1,45 @@
+html{
+    overflow-x: hidden;
+}
+.intro{
+    padding-top: 30vh !important;
+    text-align: center;
+}
+.intro hgroup h1{
+    font-size:2em !important;
+}
+
+.intro hgroup h3{
+    font-size:1.5em !important;
+}
+
+.faq-intro{
+    text-align: center;
+}
+
+main{
+    margin: 0 auto;
+    max-width: 120ch;
+}
+
+.background{
+    /*Particle JS header styles*/
+    position:absolute;
+    display:block;
+    top:0;
+    left:0;
+    z-index:0;
+    height:100vh!important;
+    z-index: -1;
+}
+.disclosure{
+    padding-top:1%;
+    font-weight: 600;
+}
+
+article > img{
+    border-radius: 5%;
+    width:60%;
+    margin-left:20%;
+    object-fit: cover;
+}
