@@ -221,17 +221,62 @@ Status codes are used to include information about how the processing of a reque
 
 People do [create their own custom status codes](https://http.dev/418) ([ahem](https://http.dev/420)), and also change the status descriptions often. It is not recommended to do this, if your custom code gets used for something down the road then your service will be broken!
 
-## Let's look at existing sites (TODO)
+## Let's look at existing sites
 
-...
+We can see how this works on real websites. Requests and responses are sent publicly so they can be inspected, and you can even manually construct requests.
 
-curl
+### Browser dev-tools
 
-httpie
+The easiest way to do this is right in your browser. If you are using a chromium based browser (Chrome, opera, edge etc. and also firefox has this functionality) you can use the developer tools to see the headers. 
 
-browser dev tools
+For me I need to open the developer tools and then head to the network tab. 
 
-## How we're going to implement all this (TODO)
+![](../images/Post%201/ignite-network-tab.png)
+
+Now that I have it open I can go to https://schulichignite.com and will see the network requests come in. There are a bunch of requests and responses. The one we care about for now is one that has the type of `document` (this is the initial request response):
+
+![](../images/Post%201/initial-request.png)
+
+We can now inspect this request directly by double clicking on it:
+
+![](../images/Post%201/inspecting-headers.gif)
+
+
+### httpie
+
+[httpie](https://httpie.io/) is a [GUI](https://httpie.io/desktop) and [CLI](https://httpie.io/cli) that will let you construct requests and see responses. Here is a diagram of how to use it:
+
+1. Select method and URL
+2. Modify headers and Body
+3. Send the request
+4. See the raw form of your request
+5. See your response
+
+![](../images/Post%201/httpie-diagram.png)
+
+There is also a CLI version of httpie, but a much more robust CLI alternative is `Curl`
+
+### Curl
+
+[Curl](https://curl.se/) is a common command line tool included in most linux distributions. This tool will allow you to do **waaay** more than just create requests and see responses, and it's worth looking into yourself. But for the absolute basics if you want to send a simple GET request you can do it with:
+
+```bash 
+curl https://schulichignite.com
+```
+
+You can then add headers by adding a `-H` flag with the text:
+
+```bash
+curl https://schulichignite.com -H "Host: schulichignite.com"
+```
+
+You can then change the method using `-X`:
+
+```bash
+curl -X DELETE https://schulichignite.com/image/my-image.png
+```
+
+## How we're going to implement all this
 
 As mentioned earlier our process will be to create 3 classes whichwill represent all of our required HTTP interaction, these will be added to in later posts to add additional functionality. Here are the required features for the 3 classes:
 
@@ -244,7 +289,7 @@ As mentioned earlier our process will be to create 3 classes whichwill represent
 
 `Request`s must have:
 
-- A method (GET, PUT, POST, DELETE)
+- A method (`GET`, `PUT`, `POST`, `DELETE`)
 - A hostname
 - A slug
 - Additional Headers (optional)
@@ -268,7 +313,26 @@ On top of these there are a few "helper" objects that will be stored inside thes
 - A class used to store the MIME type and path to the resource
 - Has a function that takes the path to a resource and generates a valid MIMEType for that file
 
-We are going to create these objects by first defining some tests that say how we want users to use our code when it's done. For examplle we can write some tests to make sure we can create status codes, that it works at all edge cases, and that is errors if we go out of the range of allowed status codes (100-599):
+### Testing
+
+Now that we've know the features we need to go through and write tests so we know they work properly and then write the features to make the tests work. We're going to do this using [pytest](https://docs.pytest.org). This is a testing framework that will help us check if our code is working correctly. Specifically we are going to write tests for how we **want** the system to work, and then edit the code until the tests pass. 
+
+This is called test driven development (TDD), and it's a common practice in software development. This doesn't work well for every type of application, but it's handy for protocols where there are clear rules that the system should abide by. Since we know what should happen we know what tests to write, usually the biggest problem of TDD is we don't know **exactly** what functionality we need, which makes writing tests hard. Since we know the protocol well enough we know what it should do and so the tests can accurately tells us if we make a mistake in our code.
+
+The tests can all be found inside the `/tests` folder for each post.
+
+To get started run:
+
+1. `pip install -e .`; Should be run in the main directory (where `setup.py` is). This installs `hhttpp` as an editable package, meaning changes to the folder are automatically updated without needing to be reinstalled
+2. `pytest`; Once you have the project installed you can run the command in the main directory (where `setup.py` is) to run the tests
+
+From there within the source code our structure is basically to have 1 long test function per class, which tests that classes functionality. 
+
+#### Our TDD Approach
+
+We are going to create these objects by first defining some tests that say how we want users to use our code when it's done. For example we can write some tests to make sure we can create status codes, that it works at all edge cases, and that is errors if we go out of the range of allowed status codes (100-599):
+
+`/tests/classes_test.py`
 
 ```python
 from pytest import raises
@@ -295,7 +359,52 @@ def test_status_codes():
         StatusCode(600, "Uknown Browser")
 ```
 
-...TODO
+So we can create these sorts of tests for each of these classes. So for example if we wanted to have a method on the `Server` object called `Server.parse_request(request:str)->Request`, we can pre-create a test and put it in the file that will fail until we create the correct method:
+
+`/hhttpp/classes.py`
+```python
+@dataclass
+class Server:
+    ... # More attributes and methods here removed for simplicity
+
+    def parse_request(request:str)->Request:
+        ...
+```
+
+`/tests/classes_test.py`
+```python
+from pytest import raises
+from hhttpp.classes import *
+
+def test_server():
+    s = Server()
+
+    raw_request = "GET / HTTP/2\nHost: schulichignite.com"
+
+    req = s.parse_request(raw_request)
+
+    assert type(req) == Request # Will fail until a request object is returned
+```
+
+From here then when we eventually fill out the function (in this case we're going to hardcode a result):
+
+`/hhttpp/classes.py`
+```python
+@dataclass
+class Server:
+    ... # More attributes and methods here removed for simplicity
+
+    def parse_request(request:str) -> Request:
+        # TODO: Parse input text to generate Request object
+        result = Request("schulichignite.com", "/", "GET")
+        if len(self.logs) >= self.log_limit:
+            print("500 or more, popping value")
+            self.logs.pop()
+        self.logs.append(result)
+        return result
+```
+
+This approach of creating tests that expect the correct result, and then making our project around these tests is how I will build out the rest of this system.
 
 ### HHTTPP Structure
 
@@ -318,21 +427,6 @@ Response
 - is_binary flag for responses that contain binary content (i.e. images, pdf's, exe's etc.)
 - A server header that defaults to `HHTTPP`
 - `is_error` flag for responses that are errors (4xx/5xx)
-
-### Testing (TODO)
-
-Now that we've created all these features we need to go through and write tests so we know they work properly. We're going to do this using [pytest](https://docs.pytest.org). This is a testing framework that will help us check if our code is working correctly. Specifically we are going to write tests for how we **want** the system to work, and then edit the code until the tests pass. 
-
-This is called test driven development (TDD), and it's a common practice in software development. This doesn't work well for every type of application, but it's handy for protocols where there are clear rules that the system should abide by. Since we know what should happen we know what tests to write, usually the biggest problem of TDD is we don't know **exactly** what functionality we need, which makes writing tests hard. Since we know the protocol well enough we know what it should do and so the tests can accurately tells us if we make a mistake in our code.
-
-The tests can all be found inside the `/tests` folder for each post.
-
-To get started run:
-
-1. `pip install -e .`; Should be run in the main directory (where `setup.py` is). This installs `hhttpp` as an editable package, meaning changes to the folder are automatically updated without needing to be reinstalled
-2. `pytest`; Once you have the project installed you can run the command in the main directory (where `setup.py` is) to run the tests
-
-From there within the source code our structure is basically to have 1 long test function per class, which tests that classes functionality. 
 
 ## More resources
 
