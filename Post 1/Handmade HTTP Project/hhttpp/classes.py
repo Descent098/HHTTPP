@@ -37,6 +37,7 @@ Any useful examples of basic usage of this module, make sure to enclose code in 
     ```
 """
 from __future__ import annotations
+import os
 from dataclasses import dataclass, field
 from typing import Literal, List, Union
 
@@ -50,10 +51,19 @@ class Request:
     content:str = ""
     
     def __post_init__(self):
+        # Make sure hostname isn't URL
+        self.hostname = self.hostname.replace("http://","").replace("https://","") # Strip accidental protocols
+        if "/" in self.hostname:
+            raise ValueError(f"/ found in hostname {self.hostname} please confirm this isn't a URL")
+        
+        # Make sure method is valid and uppercase
         self.method = self.method.strip().upper()
         if not self.method in ["GET","POST","PUT","DELETE"]:
             raise ValueError(f"Provided method {self.method} is not valid")
-        ...
+        
+        # Setup default headers
+        self.headers["host"] = self.hostname
+        self.headers["accept"] = self.headers.get("accept", "*/*")
 
 @dataclass
 class StatusCode:
@@ -73,72 +83,21 @@ class StatusCode:
         return False
 
 @dataclass
-class Response:
-    # Used to represent a HTTP Response
-    status:StatusCode
-    headers:dict = field(default_factory=lambda: dict())
-    content: str = ""
-    is_binary: bool = False # Whether or not response should be binary instead of string
-
-    def __post_init__(self):
-        self.headers["Server"] = "HHTTPP"
-
-    def is_error(self) -> bool:
-        if self.status.value >=400:
-            return True
-        return False
-    
-
-@dataclass
-class Server:
-    # Used to represent an overall HTTP server
-    proxy_directory:str = "."
-    error_on_4xx: bool = False # Should raise a python error on 4xx status codes
-    error_on_5xx: bool = True # Should raise a python error on 5xx status codes
-    log_limit: int = 500 # The number of logs to maintain
-    logs: List[Union[Request, Response]] = field(default_factory=lambda:[])
-    
-    def parse_request(self, input_text:str) -> Request:
-        # TODO: Parse input text to generate Request object
-        result = Request("schulichignite.com", "/", "GET")
-        if len(self.logs) >=self.log_limit:
-            print("500 or more, popping value")
-            self.logs.pop()
-        self.logs.append(result)
-        return result
-        
-    def generate_response(self, request: Request) -> Response:
-        # TODO: Locate resource, setup status code etc.
-        headers = {"hostname": request.hostname}
-        content = "<html><head><title>Hello World</title></head><body><h1>Hello World</h1></body></html>"
-        
-        # TODO: Pick status code
-        status_code = StatusCode(200, "Ok")
-        # status_code = StatusCode(404, "Not Found")
-        # status_code = StatusCode(500, "Internal Server Error")
-
-        # TODO: Create response object
-        result = Response(status_code, headers, content)
-        if self.error_on_4xx and (399<status_code.value<500):
-            raise ValueError(f"Recieved client error status code '{status_code}: {status_code.description}' on request: {request}")
-            
-        if self.error_on_5xx and (499<status_code.value<600):
-            raise ValueError(f"Recieved server error status code {status_code} on request: {request}")
-
-        if len(self.logs) >=500:
-            self.logs.pop()
-        self.logs.append(result)
-        return result
-    
-    def send_request(self, request:Request) -> Response:
-        # TODO: Network send the request and get a reponse
-        return self.generate_response(request)
-
-@dataclass
 class MIMEType:
     type:str
-    resource_path: str
+    resource_path: Union[None, str] = None
 
+    def __post_init__(self):
+        # Incorrect manual type
+        if not len(self.type.split("/")) == 2:
+            raise ValueError(f"Incorrect MIME Type provided {self.type}")
+        elif not self.type.split("/")[1]:
+            raise ValueError(f"Incorrect MIME Type provided {self.type}")
+
+        # Validate resource path exists if specified
+        if self.resource_path:
+            if not os.path.exists(self.resource_path):
+                raise ValueError(f"Resource {self.resource_path} does not exist")
 
     def generate_MIME_type_from_path(path:str) -> MIMEType:
         # Takes in a file path and returns a Valid MIMEType for it
@@ -167,6 +126,74 @@ class MIMEType:
     
     def __str__(self) -> str:
         return str(self.type)
+
+@dataclass
+class Response:
+    # Used to represent a HTTP Response
+    status:StatusCode
+    type: Union[None, MIMEType] = None
+    headers:dict = field(default_factory=lambda: {"server":"HHTTPP"})
+    content: str = ""
+    is_binary: bool = False # Whether or not response should be binary instead of string
+
+    def __post_init__(self):
+        
+        # Make sure server header is set properly
+        self.headers.update({"Server": "HHTTPP","server": "HHTTPP"})
+        # Make sure lowercase version of headers are available
+        for key in self.headers:
+            self.headers[key.lower()] = self.headers[key]
+
+    def is_error(self) -> bool:
+        if self.status.value >=400:
+            return True
+        return False
+    
+
+@dataclass
+class Server:
+    # Used to represent an overall HTTP server
+    proxy_directory:str = "."
+    error_on_4xx: bool = False # Should raise a python error on 4xx status codes
+    error_on_5xx: bool = True # Should raise a python error on 5xx status codes
+    log_limit: int = 500 # The number of logs to maintain
+    logs: List[Union[Request, Response]] = field(default_factory=lambda:[])
+    
+    def parse_request(self, input_text:str) -> Request:
+        # TODO: Parse input text to generate Request object
+        result = Request("schulichignite.com", "/", "GET")
+        if len(self.logs) >= self.log_limit:
+            print("500 or more, popping value")
+            self.logs.pop()
+        self.logs.append(result)
+        return result
+        
+    def generate_response(self, request: Request) -> Response:
+        # TODO: Locate resource, setup status code etc.
+        headers = {"hostname": request.hostname,"server": "HHTTPP","Server": "HHTTPP"}
+        content = "<html><head><title>Hello World</title></head><body><h1>Hello World</h1></body></html>"
+        
+        # TODO: Pick status code
+        status_code = StatusCode(200, "Ok")
+        # status_code = StatusCode(404, "Not Found")
+        # status_code = StatusCode(500, "Internal Server Error")
+
+        # TODO: Create response object
+        result = Response(status_code,MIMEType("text/html"), headers=headers, content=content)
+        if self.error_on_4xx and (399<status_code.value<500):
+            raise ValueError(f"Recieved client error status code '{status_code}: {status_code.description}' on request: {request}")
+            
+        if self.error_on_5xx and (499<status_code.value<600):
+            raise ValueError(f"Recieved server error status code {status_code} on request: {request}")
+
+        if len(self.logs) >=500:
+            self.logs.pop()
+        self.logs.append(result)
+        return result
+    
+    def send_request(self, request:Request) -> Response:
+        # TODO: Network send the request and get a reponse
+        return self.generate_response(request)
 
 if __name__ == "__main__": # Code inside this statement will only run if the file is explicitly called and not just imported.
     
