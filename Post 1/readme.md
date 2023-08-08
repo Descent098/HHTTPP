@@ -386,7 +386,7 @@ def test_server():
     assert type(req) == Request # Will fail until a request object is returned
 ```
 
-From here then when we eventually fill out the function (in this case we're going to hardcode a result):
+From here then when we eventually fill out the function (in this case we're going to hardcode a result and we'll do the parsing in the next post):
 
 `/hhttpp/classes.py`
 ```python

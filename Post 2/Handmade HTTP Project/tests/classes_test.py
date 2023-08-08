@@ -171,53 +171,52 @@ def test_server():
     assert req.method == "GET"
     assert req.headers["host"] == "schulichignite.com"
     assert req.headers["accept"] == "*/*" # TODO: Uncomment when feature is added
-    # assert s.content == "{{'name':'kieran','age':24}}" # TODO: Uncomment when feature is added
+    assert req.content == "{{'name':'kieran','age':24}}" # TODO: Uncomment when feature is added
     
-    # TODO: Requires parsing
     ## PUT with content and headers
-    # raw_request = "PUT / HTTP/1.1\nHost: schulichignite.com\nAccept: */*\n\n{{'name':'kieran','age':24}}"
-    # req = s.parse_request(raw_request)
-    # assert req.method == "PUT"
-    # assert type(req) == Request # Will fail until a request object is returned
-    # assert req.headers["host"] == "schulichignite.com"
-    # assert req.headers["accept"] == "*/*" # TODO: Uncomment when feature is added
-    # assert s.content == "{{'name':'kieran','age':24}}" # TODO: Uncomment when feature is added
+    raw_request = "PUT / HTTP/1.1\nHost: schulichignite.com\nAccept: */*\n\n{{'name':'kieran','age':24}}"
+    req = s.parse_request(raw_request)
+    assert req.method == "PUT"
+    assert type(req) == Request # Will fail until a request object is returned
+    assert req.headers["host"] == "schulichignite.com"
+    assert req.headers["accept"] == "*/*" # TODO: Uncomment when feature is added
+    assert req.content == "{{'name':'kieran','age':24}}" # TODO: Uncomment when feature is added
     
     ## DELETE
-    # raw_request = "DELETE / HTTP/1.1\nHost: schulichignite.com"
-    # req = s.parse_request(raw_request)
-    # assert req.method == "DELETE"
-    # assert type(req) == Request # Will fail until a request object is returned
-    # assert req.headers["host"] == "schulichignite.com"
+    raw_request = "DELETE / HTTP/1.1\nHost: schulichignite.com"
+    req = s.parse_request(raw_request)
+    assert req.method == "DELETE"
+    assert type(req) == Request # Will fail until a request object is returned
+    assert req.headers["host"] == "schulichignite.com"
     
     ## DELETE with content and headers
-    # raw_request = "DELETE / HTTP/1.1\nHost: schulichignite.com\ncontent-type: application/json\n\n{{'id':'f78ae168-d643-4702-a2dd-7f58314dad96'}}"
-    # req = s.parse_request(raw_request)
-    # assert type(req) == Request # Will fail until a request object is returned
-    # assert req.method == "DELETE"
-    # assert req.headers["host"] == "schulichignite.com"
-    # assert req.headers["content-type"] == "application/json"
-    # assert s.content == "{{'id':'f78ae168-d643-4702-a2dd-7f58314dad96'}}"
+    raw_request = "DELETE / HTTP/1.1\nHost: schulichignite.com\ncontent-type: application/json\n\n{{'id':'f78ae168-d643-4702-a2dd-7f58314dad96'}}"
+    req = s.parse_request(raw_request)
+    assert type(req) == Request # Will fail until a request object is returned
+    assert req.method == "DELETE"
+    assert req.headers["host"] == "schulichignite.com"
+    assert req.headers["content-type"] == "application/json"
+    assert req.content == "{{'id':'f78ae168-d643-4702-a2dd-7f58314dad96'}}"
     
     ## POST with content and headers
-    # raw_request = "POST / HTTP/1.1\nHost: schulichignite.com\ncontent-type: application/json\n\n{{'id':'f78ae168-d643-4702-a2dd-7f58314dad96', 'name':'Kieran'}}"
-    # req = s.parse_request(raw_request)
-    # assert type(req) == Request # Will fail until a request object is returned
-    # assert req.method == "POST"
-    # assert req.headers["host"] == "schulichignite.com"
-    # assert req.headers["content-type"] == "application/json"
-    # assert s.content == "{{'id':'f78ae168-d643-4702-a2dd-7f58314dad96', 'name':'Kieran'}}"
+    raw_request = "POST / HTTP/1.1\nHost: schulichignite.com\ncontent-type: application/json\n\n{{'id':'f78ae168-d643-4702-a2dd-7f58314dad96', 'name':'Kieran'}}"
+    req = s.parse_request(raw_request)
+    assert type(req) == Request # Will fail until a request object is returned
+    assert req.method == "POST"
+    assert req.headers["host"] == "schulichignite.com"
+    assert req.headers["content-type"] == "application/json"
+    assert req.content == "{{'id':'f78ae168-d643-4702-a2dd-7f58314dad96', 'name':'Kieran'}}"
 
     # Test log limit
     ## Default (500)
     for _ in range(600): 
-        s.generate_response(s.parse_request(""))
+        s.generate_response(s.parse_request(raw_request))
     assert len(s.logs) == 500
 
     ## Custom (700)
     s = Server(log_limit = 700)
     for _ in range(900): 
-        s.generate_response(s.parse_request(""))
+        s.generate_response(s.parse_request(raw_request))
     assert len(s.logs) == 700
 
     # Errors
