@@ -251,5 +251,5 @@ So the series will roughly be in this order for the posts (0 is this post):
    - Status codes
    - MIME types
 2. Use request and response objects to generate proper request/response headers and content encoding
-3. Definining a CLI (command line interface); Lets people use our system more easily
-4. Implementing the networking portion
+3. Implementing the networking portion
+4. Definining a CLI (command line interface); Lets people use our system more easily

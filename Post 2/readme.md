@@ -28,7 +28,7 @@ Regex is a pattern matching language. It let's you define patterns of text that 
 "\d" # Match any single digit (0-9)
 ```
 
-Regex will get parsed in python using the `re` module, and will create `Match` objects. These `Match` objects contain each match for the pattern you define. There are lots of different ways to use regex, but we will use capture groups.
+Regex will usually parsed in python using the [re](https://docs.python.org/3/library/re.html) module (but we will also use [glob](https://docs.python.org/3/library/glob.html)), and will create `Match` objects. These `Match` objects contain each match for the pattern you define. There are lots of different ways to use regex, but we will use 2 ways, globbing and capture groups.
 
 Capture groups is essentially the idea that we define a set of "groups", and for each `Match` in the pattern there will be "groups" of text matched. For example we might read the first line of a HTTP request we will want different groups for the method, slug and http version. To create groups you put a sub-expression into parenthesis. For example to capture a single letter, and a single digit into separate groups you do `([A-z])(\d)`. This will find any letter then digit, so for example with the string `"a1,b5,dt,r7"` would have 3 matches `a1, b5 and r7` each with 2 groups: 
 
@@ -36,7 +36,47 @@ Capture groups is essentially the idea that we define a set of "groups", and for
 - `b5`: Group 1 is `b`, group 2 is `5`
 - `r7`: Group 1 is `r`, group 2 is `7`
 
-There is not enough time to cover regex fully, but for each set of regex we will use there will be an image explaining each portion of the expression. You can check the [more resources](#more-resources) section for a general introduction to regex thatgoes into more details.
+We will cover globbing in the next section, it is a bit easier to do and is used to get a list of files.There is not enough time to cover regex fully, but for each set of regex we will use there will be an image explaining each portion of the expression. You can check the [more resources](#more-resources) section for a general introduction to regex thatgoes into more details.
+
+## Getting file lists (TODO)
+
+There are two more attributes we have added to the `Server` class, `file_list` and `urls`. `file_list` is a list of all the paths of files in `Server.proxy_directory`, and URL's are going to be the URL's that correspond to each file. The code for this can be found in `Server.__post_init__()`, and in this section we will describe how we generate `Server.file_list`.
+
+We are going to use the [glob](https://docs.python.org/3/library/glob.html) module to get a list of files. This lets us define patterns similar to regex, but it's specifically built for files. Since this is less applicable the basics are that `*` means replace with anything. So in our case to get every single file in a folder we can do `glob.glob("*.*")`. This is great, but what about if we have subdirectories (i.e. `/js/file.js`)? Now we need a fancier pattern. 
+
+The easiest way to do this is following the pattern `<folder>/**/*`, this says all files in all folders. We then pass the recursive flag and it will find everything `glob.glob("<folder>/**/*, recursive=True)`. For performance reasons we are going to use `glob.iglob()`, and we will replace `<folder>` with the absolute path to the proxy_directory we set on our server object.
+
+Putting it all together here is the basic idea:
+
+```python
+class Server:
+    ... # More code
+
+    def __post_init__(self):
+        proxy_dir = os.path.abspath(self.proxy_directory) # Making path absolute makes this easier
+
+        for file in glob.iglob(os.path.join(proxy_dir, '**',"*.*"), recursive=True):
+            self.file_list.append(os.path.join(proxy_dir, file))
+```
+
+In the actual code I did the second part with a list comprehension:
+
+```python
+class Server:
+    ... # More code
+
+    def __post_init__(self):
+        proxy_dir = os.path.abspath(self.proxy_directory)
+
+        self.file_list = [
+        f"{os.path.join(proxy_dir, file)}" 
+        for file in glob.iglob(os.path.join(proxy_dir, '**',"*.*"), recursive=True)
+        ]
+```
+
+### Creating URL's from file list (TODO)
+
+This is important because it will allow us to do things like aliased URL's. So for example if we don't do this people could only access a file called `about.html` at `<domain>/about.html`. But we also want to do `<domain>/about`, so we need a dictionary mapping of these URL's to the files to be able to find it. 
 
 ## Matching headers (TODO)
 

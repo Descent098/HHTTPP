@@ -40,6 +40,7 @@ from __future__ import annotations
 import re
 import os
 import glob
+import socket
 from dataclasses import dataclass, field
 from typing import Literal, List, Union, Dict
 
@@ -201,9 +202,10 @@ class Response:
         # Convert headers to plaintext
         header_text = ""
         for header in self.headers:
-            header_text += f"{header}: {self.headers[header]}\n"
 
-        return f"""{self.status.value} {self.status.description}\n{header_text}\n\n{self.content}"""
+            header_text += f"{header}: {self.headers[header]}\r"
+
+        return f"""HTTP/1.1 {self.status.value} {self.status.description}\n{header_text}\n\n{self.content}"""
         
     
 
@@ -217,6 +219,9 @@ class Server:
     logs: List[Union[Request, Response]] = field(default_factory=lambda:[])
     file_list: List[str] = field(default_factory=lambda:[]) # all the files in the proxy_directory
     urls: Dict[str,str] = field(default_factory=lambda:dict()) # A mapping of files to URL's
+    host:str = "127.0.0.1"
+    port:int = 9338
+    socket: Union[None, socket.socket] = None
     
     def __post_init__(self):
         proxy_dir = os.path.abspath(self.proxy_directory)
@@ -311,7 +316,7 @@ class Server:
                 with open(mime.resource_path, "rb") as byte_file:
                     content = byte_file.read()
             else:
-                with open(mime.resource_path, "r") as text_file:
+                with open(mime.resource_path, "r", encoding="UTF-8") as text_file:
                     content = text_file.read()
         else:
             content = ""
@@ -331,6 +336,67 @@ class Server:
         self.logs.append(result)
         return result
     
+    def start_server(self):
+        print("Starting")
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            ## SOL_Socket details can be found here https://www.gnu.org/software/libc/manual/html_node/Socket_002dLevel-Options.html#Socket_002dLevel-Options
+            ## This basically sets the internal options of the socket itself to say that SO_REUSEADDR is set to 1 or true which permits reuse of local addresses for this socket 
+            ## If you enable this option, you can actually have two sockets with the same Internet port number; but the system won't allow you to use the two identically-named sockets in a way that would confuse the Internet.
+            ## The reason for this option is that some higher-level Internet protocols, including FTP, require you to keep reusing the same port number.
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # Set internal socket to allow SO_REUSEADDR
+            s.bind((self.host, self.port)) # Bind the configured socket to the server (assign ip address and port number to the socket instance)
+            s.listen(1) # Listen for incoming connections
+
+            print(f'Listening on port {self.port} ...')
+            
+            s.settimeout(None)            
+            while True:
+                try:
+                    # Wait for client connections
+                    print("Accepting")
+                    client_connection, client_address = s.accept()
+                    print("Accepted")
+
+                    # Get the client request
+                    print("Decoding")
+                    raw_data = client_connection.recv(4096)
+                    if raw_data:
+                        print("Raw data found")
+                        request = raw_data.decode()
+                    else: 
+                        print("No raw data")
+                        continue
+                    print("Decoded")
+                    print(request)
+                    
+                    req = self.parse_request(request)
+                    print(f"{req=}")
+                    
+                    resp = self.generate_response(req)
+                    print(f"{str(resp)=}\n\n")
+                    print(f"{str(resp)}")
+                    
+                    if resp.is_binary:
+                        print("is binary ")
+                        client_connection.send(str(f"HTTP/1.1 {resp.status.value} {resp.status.description}\n").encode())
+                        header_text = ""
+                        for header in self.headers:
+                            header_text += f"{header}: {self.headers[header]}\n"
+                        client_connection.send(header_text.encode())
+                        client_connection.send(resp.content)
+                    else:
+                        print("is text ")
+                        client_connection.sendall(str(resp).encode())
+                    print("waiting to close")
+                    # client_connection.close()
+                    client_connection.shutdown(socket.SHUT_RDWR)
+                    print("Closed")
+                except socket.timeout:
+                    continue
+                except KeyboardInterrupt:
+                    break
+                
+    
     def send_request(self, request:Request) -> Response:
         # TODO: Network send the request and get a reponse
         return self.generate_response(request)
@@ -338,18 +404,18 @@ class Server:
 if __name__ == "__main__": # Code inside this statement will only run if the file is explicitly called and not just imported.
     
     s = Server(f"tests{os.sep}example_site")
+    s.start_server()
+#     test = """GET /img/low-poly-ice-caps.jpg HTTP/1.1
+# Content-Type: text/html; charset=utf-8
+# Server: hhttpp\n
+#     <!DOCTYPE HTML>
+#     <html>
+#         <body>
+#             <h1>Hello, World!</h1>
+#         </body>
+#     </html>"""
     
-    test = """GET /img/low-poly-ice-caps.jpg HTTP/1.1
-Content-Type: text/html; charset=utf-8
-Server: hhttpp\n
-    <!DOCTYPE HTML>
-    <html>
-        <body>
-            <h1>Hello, World!</h1>
-        </body>
-    </html>"""
-    
-    print(s.generate_response(s.parse_request(test)))
+#     print(s.generate_response(s.parse_request(test)))
     # for _ in range(600):
     #     s.generate_response(s.parse_request(""))
     

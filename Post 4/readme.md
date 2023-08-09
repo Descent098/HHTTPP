@@ -1,12 +1,11 @@
-# Implementing the networking portion
 
+# Creating a CLI
 
-....
+## Why? (TODO)
 
-## How connections work
+## Arugment parsing (TODO)
 
-- Ip's and ports
-  - ipv4 vs ipv6
-  - Localhost
-- hostname/DNS
-- 
+### How to use docopt (TODO)
+
+...
+
