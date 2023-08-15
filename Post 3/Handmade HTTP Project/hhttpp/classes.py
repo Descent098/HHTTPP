@@ -354,7 +354,7 @@ class Server:
                 try:
                     # Wait for client connections
                     print("Accepting")
-                    client_connection, client_address = s.accept()
+                    client_connection, _ = s.accept()
                     print("Accepted")
 
                     # Get the client request
@@ -364,28 +364,24 @@ class Server:
                         print("Raw data found")
                         request = raw_data.decode()
                     else: 
-                        print("No raw data")
+                        print("No raw data found")
                         continue
                     print("Decoded")
                     print(request)
                     
                     req = self.parse_request(request)
-                    print(f"{req=}")
-                    
                     resp = self.generate_response(req)
-                    print(f"{str(resp)=}\n\n")
-                    print(f"{str(resp)}")
                     
                     if resp.is_binary:
-                        print("is binary ")
                         client_connection.send(str(f"HTTP/1.1 {resp.status.value} {resp.status.description}\n").encode())
                         header_text = ""
-                        for header in self.headers:
-                            header_text += f"{header}: {self.headers[header]}\n"
+                        print(f"{resp.headers=}")
+                        for header in resp.headers:
+                            header_text += f"{header}: {resp.headers[header]}\n"
                         client_connection.send(header_text.encode())
-                        client_connection.send(resp.content)
+                        client_connection.send("\n".encode())
+                        client_connection.sendall(resp.content)
                     else:
-                        print("is text ")
                         client_connection.sendall(str(resp).encode())
                     print("waiting to close")
                     # client_connection.close()
@@ -395,32 +391,7 @@ class Server:
                     continue
                 except KeyboardInterrupt:
                     break
-                
-    
-    def send_request(self, request:Request) -> Response:
-        # TODO: Network send the request and get a reponse
-        return self.generate_response(request)
 
 if __name__ == "__main__": # Code inside this statement will only run if the file is explicitly called and not just imported.
-    
     s = Server(f"tests{os.sep}example_site")
     s.start_server()
-#     test = """GET /img/low-poly-ice-caps.jpg HTTP/1.1
-# Content-Type: text/html; charset=utf-8
-# Server: hhttpp\n
-#     <!DOCTYPE HTML>
-#     <html>
-#         <body>
-#             <h1>Hello, World!</h1>
-#         </body>
-#     </html>"""
-    
-#     print(s.generate_response(s.parse_request(test)))
-    # for _ in range(600):
-    #     s.generate_response(s.parse_request(""))
-    
-    # print(len(s.logs))
-    # ok = StatusCode(200, "OK")
-    # print(Request("schulichignite.com", "/"))
-    # print(Response(ok))
-    # print(s)

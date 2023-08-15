@@ -1,11 +1,12 @@
-
-# Creating a CLI
+# Post 4; Creating a CLI
 
 ## Why? (TODO)
 
 ## Arugment parsing (TODO)
 
-### How to use docopt (TODO)
+### Docopt (TODO)
+
+#### When to use docopt and when not to (TODO)
 
 ...
 
