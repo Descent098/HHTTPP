@@ -38,13 +38,70 @@ Capture groups is essentially the idea that we define a set of "groups", and for
 
 We will cover globbing in the next section, it is a bit easier to do and is used to get a list of files.There is not enough time to cover regex fully, but for each set of regex we will use there will be an image explaining each portion of the expression. You can check the [more resources](#more-resources) section for a general introduction to regex thatgoes into more details.
 
+### Why?
+
+Regex is great for more complex patterns you need to locate. There are a few cases, but I want to give a comparisson to an alternative first. Iterative searching is where you go line-by-line and create some code that looks for your pattern manually. For example below we have the iterative code for collecting just the words that come before "apple" in a sentence
+
+```python
+test_input = """blah blah apple blah blah
+blah, blah blah blah apple apple
+blah apple
+apple
+blah blah blah blah
+"""
+
+def get_words_before_apple(text:str) -> str:
+    result = []
+    for line in test_input.split("\n"):
+        if "apple" in line:
+            start = line.index("apple")
+            result.append(line[:start:]) # Cutt off at start of apple
+        else:
+            result.append(line)
+    return "\n".join(result)
+
+get_words_before_apple(test_input)
+```
+
+2 points about this code:
+
+1.  There are a ton of whitespace bugs, along with other logical errors
+2.  A regular expression would be much smaller, and likely easier to understand (`^(.*)apple.*`)
+
+**Regex**
+
+| Pros | Cons |
+|------|------|
+| Universal accross languages | Used in tons of applications beyond just in programming languages (file+folder organization, searching etc.) |
+| Syntax stays the same, so other people can help debug if they're familiar with it | large learning curve initially |
+| It is often faster than the iterative approach because the language will optimize the module/package for regex | The more clever the pattern, usually the more difficult it is to understand |
+
+*When to use*
+
+You can use regex whenever, but the ideal situation is when you have complex patterns that would take a lot of effort to implement with itterative approaches. For example only the uppercase letters that occur between the worlds apple and strawberry `^.*apple(.*)strawberry.*$`. 
+
+Additionally it can be used for more than just pattern matching in programs, regex can be a useful skill to learn for:
+
+- Searching with [grep](https://www.gnu.org/software/grep/manual/grep.html)
+- Organizing files + folders
+- Searching & replacing in text editing applications (like [vs code](https://learn.microsoft.com/en-us/visualstudio/ide/using-regular-expressions-in-visual-studio?view=vs-2022))
+
+**Iterative Approach (TODO)**
+
+| Pros | Cons | When to use |
+|------|------|-------------|
+|..|...|...|
+
+
+This works fine in python, but in lots of other languages you tend to itterate **per letter**. 
+
 ## Getting file lists (TODO)
 
 There are two more attributes we have added to the `Server` class, `file_list` and `urls`. `file_list` is a list of all the paths of files in `Server.proxy_directory`, and URL's are going to be the URL's that correspond to each file. The code for this can be found in `Server.__post_init__()`, and in this section we will describe how we generate `Server.file_list`.
 
 We are going to use the [glob](https://docs.python.org/3/library/glob.html) module to get a list of files. This lets us define patterns similar to regex, but it's specifically built for files. Since this is less applicable the basics are that `*` means replace with anything. So in our case to get every single file in a folder we can do `glob.glob("*.*")`. This is great, but what about if we have subdirectories (i.e. `/js/file.js`)? Now we need a fancier pattern. 
 
-The easiest way to do this is following the pattern `<folder>/**/*`, this says all files in all folders. We then pass the recursive flag and it will find everything `glob.glob("<folder>/**/*, recursive=True)`. For performance reasons we are going to use `glob.iglob()`, and we will replace `<folder>` with the absolute path to the proxy_directory we set on our server object.
+The easiest way to do this is following the pattern `<folder>/**/*`, this says all files in all folders. We then pass the recursive flag and it will find everything `glob.glob("<folder>/**/*, recursive=True)`. For performance reasons we are going to use `glob.iglob()` (works the same), and we will replace `<folder>` with the absolute path to the proxy_directory we set on our server object.
 
 Putting it all together here is the basic idea:
 
@@ -74,9 +131,37 @@ class Server:
         ]
 ```
 
-### Creating URL's from file list (TODO)
+### Creating URL's from file list
 
-This is important because it will allow us to do things like aliased URL's. So for example if we don't do this people could only access a file called `about.html` at `<domain>/about.html`. But we also want to do `<domain>/about`, so we need a dictionary mapping of these URL's to the files to be able to find it. 
+Now that we have the files, we want to make sure that we can match URL's when they come in. For example if we recieve a GET request with `/about` as the slug we need to know what file to grab. In our case the only two extra rules we will have are:
+
+- That HTML files will get their regular filenames, and their file with no extensions as valid URL's. For example `/about` and `/about.html` will point to the same file. To do this we need a dictionary mapping of these URL's to the files to be able to find it. 
+- `/` is an alias for `index.html` ([this is just the norm in webdev](https://dpericich.medium.com/why-do-we-use-index-html-files-71cf1973e10#:~:text=The%20index%20is%20the%20root,specific%20location%20on%20the%20server.))
+
+So for example some simplified code might look like this:
+
+```python
+
+proxy_directory = "/site"
+
+files = ["/site/about.html", "/site/js/main.js", "/site/index.html"]
+
+urls = dict()
+    
+for file in files:
+    if file.endswith("index.html"): # Homepage
+        urls["/"] = file
+        urls["/index.html"] = file
+    elif file.endswith(".html"): # HTML files
+        urls[file.replace(proxy_directory, "")] = file # filename (i.e. /about.html)
+        urls[file.replace(proxy_directory, "")[:-5:]] = file # remove extension (i.e. /about)
+    else: # Non-html files
+        urls[file.replace(proxy_directory, "")] = file
+
+print(urls) # {'/about.html': '/site/about.html', '/about': '/site/about.html', '/js/main.js': '/site/js/main.js', '/': '/site/index.html', '/index.html': '/site/index.html'}
+```
+
+The actual implementation can be found in `Server.__post_init__()`.
 
 ## Matching headers (TODO)
 
@@ -84,7 +169,7 @@ This is important because it will allow us to do things like aliased URL's. So f
 
 ![](./../images/Post%202/regex-http-headers.png)
 
-[Link to regex101](https://regex101.com/r/9IHYxj/1) 
+[Link to regex101](https://regex101.com/r/9IHYxj/2)
 
 You can do this with normal strings in python like this:
 

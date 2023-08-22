@@ -15,6 +15,81 @@ On top of that, there are a few caveats:
 2. It will only support a portion of the HTTP response codes
 3. It will not have optimizations like caching or multithreading
 
+## Order of development
+
+In order to get things to work we will first implement the HTTP information **without** real networking, once we have an HTTP implementation that works without networking, we will cover networking. The reason we do things this way is because it seperates the complexity so that we aren't troubleshooting HTTP **AND** networking at the same time. Once we have the "language" (protocol) we're going to talk in, then we'll focus on how to "speak" it (send network requests).
+
+So the series will roughly be in this order for the posts (0 is this post):
+
+0. Getting the project setup; Getting the boring python packaging bits out of the way
+1. Create request and response objects to house our info
+   - Status codes
+   - MIME types
+2. Use request and response objects to generate proper request/response headers and content encoding
+3. Implementing the networking portion
+4. Definining a CLI (command line interface); Lets people use our system more easily
+
+## Terms & Concepts
+
+To start there are some terms we need to understand. Here are some of the basics:
+
+|Term | Description | Example |
+|-----|-------------|---------|
+| IP Address | This is what computers use to communicate with one another, it is similar to an actual address | `127.0.0.1` is the IP address reserved for the computer you're currently on, so if you need to communicate with yourself you can (this is useful for testing) |
+| Port | A computer can have multiple servers running on it. Each of these "servers" runs on a different port so you can communicate with them sparately | If you are running a server on your own machine and have it on port 8080 you can access it in a browser at `http://localhost:8080` | 
+|Proxy/alias | In our context we're using this to mean something that stands-in or is replaced by something else | For `localhost` is a proxy for `127.0.0.1` on your computer, so if you go to `localhost` it is the same as going to `127.0.0.1` |
+| Host | The name of a computer (local/on the machine) | Let's say you gave your PC the name `thoth` when you set it up, then on your own network you can access it at `thoth` or `thoth.local` (an alias for an IP) |
+
+### Anatomy of a URL
+
+Some of the most important terms we need to understand are what makes up a URL. A URL is what we type into a browser bar to get to a site (i.e. https://schulichignite.com). Here is a diagram breaking apart the different peices:
+
+![](./images/Post%201/url-anatomy.png)
+
+For those of you that can't read the image, this is the basic anatomy of a URL:
+
+```
+<protocol>://<domain/hostname/ip>:<port(optional)><slug/URI>
+```
+
+For example here are some URL's:
+
+```
+http://127.0.0.1:80/
+http://localhost:8000/
+http://thoth:32400/web/index
+http://schulichignite.com/contact
+http://example-site.co.uk/about-us
+```
+
+|Term | Description | Example |
+|-----|-------------|---------|
+| Protocol | The protocol is the rules and procedures that the browser should follow to communicate with the underlying server  | `http://`, `https://`, `file://`|
+| Domain | The name of a computer (remote/on a server accessible to the internet) | When you go to `google.ca` that is a domain, the domain itself is an alias for the IP address of a server that returns the webpage you're looking for domains have 2 parts, the domain name, and the TLD |
+| Domain Name | The domain name is the main portion of the domain, before the `.` | google, netflix, schulichignite |
+| TLD (top-level domain) | These groupings of domains used to serve more of a roll before, but now are mostly all the same. They are the letters that come after a `.` in a URL, and indicate usually which country the service is from | `.ca`,`.com`,`.co.uk`,`.sh` |
+| Slug/URI | The part that comes after a domain to indicate which specific resource you want from the specified server on the specified port | `/`, `/about`,`/blog/title`|
+
+## What is an HTTP proxy?
+
+A proxy server in this context is a server that will allow you to access the files in a given folder (called the proxy folder) over HTTP. So essentially when you access a URL on the proxy it will treat the slug as a path to a file. So for example if you have a proxy folder:
+
+```
+📁proxy_folder/
+├── 📁blog/
+│   └── 📄how-to-make-alfredo.html
+└── 📄 about.html
+```
+
+Then if it's proxied to `ignite.com` if you go to `ignite.com/about` it will send you the contents of `proxy_folder/about.html` over HTTP. Essentially `ignite.com` becomes an alias for `proxy_folder` and users are basically typing in glorified file paths to get your content. Same thing if you went to `ignite.com/blog/how-to-make-alfredo.html` would give you the content of `proxy_folder/blog/how-to-make-alfredo.html` via HTTP: 
+
+![](./images/proxy-basics.png)
+
+The functionality for hhttpp is based of the built in `http.server` module in python (in functionality, **not approach**). To see what this might look like open up a terminal inside `/example_site` and then run `python -m http.server 8118` from there go to your browser and type in [http://localhost:8118](http://localhost:8118). You will be able to access all the pages inside the folder from your browser!
+
+In our case we will be using [these files](https://github.com/Descent098/HHTTPP/tree/master/example_site), which when hosted correctly look like [this](https://kieranwood.ca/chat-blog/). This is what we're aiming to recreate with `hhttpp`!
+
+
 ## Code-a-long-ness
 
 These posts are not meant to be a code-a-long. There is enough detail to understand what needs to be done, and I give you the info about how to approach the problem. Other than that the solutions to how I decided to do it are available, but I do not go line-by-line through the code at any point.
@@ -180,76 +255,3 @@ class Student:
    grades:List[int] = field(default_factory=empty_list) # Initialize Student.grades to an empty list
 ```
 
-## Terms & Concepts
-
-To start there are some terms we need to understand. Here are some of the basics:
-
-|Term | Description | Example |
-|-----|-------------|---------|
-| IP Address | This is what computers use to communicate with one another, it is similar to an actual address | `127.0.0.1` is the IP address reserved for the computer you're currently on, so if you need to communicate with yourself you can (this is useful for testing) |
-| Port | A computer can have multiple servers running on it. Each of these "servers" runs on a different port so you can communicate with them sparately | If you are running a server on your own machine and have it on port 8080 you can access it in a browser at `http://localhost:8080` | 
-|Proxy/alias | In our context we're using this to mean something that stands-in or is replaced by something else | For `localhost` is a proxy for `127.0.0.1` on your computer, so if you go to `localhost` it is the same as going to `127.0.0.1` |
-| Host | The name of a computer (local/on the machine) | Let's say you gave your PC the name `thoth` when you set it up, then on your own network you can access it at `thoth` or `thoth.local` (an alias for an IP) |
-
-### Anatomy of a URL
-
-Some of the most important terms we need to understand are what makes up a URL. A URL is what we type into a browser bar to get to a site (i.e. https://schulichignite.com). Here is a diagram breaking apart the different peices:
-
-![](./images/Post%201/url-anatomy.png)
-
-For those of you that can't read the image, this is the basic anatomy of a URL:
-
-```
-<protocol>://<domain/hostname/ip>:<port(optional)><slug/URI>
-```
-
-For example here are some URL's:
-
-```
-http://127.0.0.1:80/
-http://localhost:8000/
-http://thoth:32400/web/index
-http://schulichignite.com/contact
-http://example-site.co.uk/about-us
-```
-
-|Term | Description | Example |
-|-----|-------------|---------|
-| Protocol | The protocol is the rules and procedures that the browser should follow to communicate with the underlying server  | `http://`, `https://`, `file://`|
-| Domain | The name of a computer (remote/on a server accessible to the internet) | When you go to `google.ca` that is a domain, the domain itself is an alias for the IP address of a server that returns the webpage you're looking for domains have 2 parts, the domain name, and the TLD |
-| Domain Name | The domain name is the main portion of the domain, before the `.` | google, netflix, schulichignite |
-| TLD (top-level domain) | These groupings of domains used to serve more of a roll before, but now are mostly all the same. They are the letters that come after a `.` in a URL, and indicate usually which country the service is from | `.ca`,`.com`,`.co.uk`,`.sh` |
-| Slug/URI | The part that comes after a domain to indicate which specific resource you want from the specified server on the specified port | `/`, `/about`,`/blog/title`|
-
-## What is an HTTP proxy?
-
-A proxy server in this context is a server that will allow you to access the files in a given folder (called the proxy folder) over HTTP. So essentially when you access a URL on the proxy it will treat the slug as a path to a file. So for example if you have a proxy folder:
-
-```
-📁proxy_folder/
-├── 📁blog/
-│   └── 📄how-to-make-alfredo.html
-└── 📄 about.html
-```
-
-Then if it's proxied to `ignite.com` if you go to `ignite.com/about` it will send you the contents of `proxy_folder/about.html` over HTTP. Same thing if you went to `ignite.com/blog/how-to-make-alfredo.html` would give you the content of `proxy_folder/blog/how-to-make-alfredo.html` via HTTP: 
-
-![](./images/proxy-basics.png)
-
-The functionality for hhttpp is based of the built in `http.server` module in python (in functionality, **not approach**). To see what this might look like open up a terminal inside `/example_site` and then run `python -m http.server 8118` from there go to your browser and type in [http://localhost:8118](http://localhost:8118). You will be able to access all the pages inside the folder from your browser!
-
-This is what we're aiming to recreate with `hhttpp`!
-
-## Order of development
-
-In order to get things to work we will first implement the HTTP information **without** real networking, once we have an HTTP implementation that works without networking, we will cover networking. The reason we do things this way is because it seperates the complexity so that we aren't troubleshooting HTTP **AND** networking at the same time. Once we have the "language" (protocol) we're going to talk in, then we'll focus on how to "speak" it (send network requests).
-
-So the series will roughly be in this order for the posts (0 is this post):
-
-0. Getting the project setup; Getting the boring python packaging bits out of the way
-1. Create request and response objects to house our info
-   - Status codes
-   - MIME types
-2. Use request and response objects to generate proper request/response headers and content encoding
-3. Implementing the networking portion
-4. Definining a CLI (command line interface); Lets people use our system more easily
