@@ -7,15 +7,14 @@ Now that we have our basic HTTP structure we need a way to read **actual** http 
 3. **Process the `Request` object and generate a `Reponse` object**
 4. **Generate a plaintext response from the `Response` object**
 
-## Terms & Concepts (TODO)
+## Terms & Concepts
 
 To start there are some terms we need to understand. Here's what we need to know about, and what we're going to cover in more detail later.
 
 |Term | Description | Example |
 |-----|-------------|---------|
 | Parser | A piece of code that can read data in one format (usually plain text) and parse them into another format (object, different text format etc.) | A fast [HTTP parser](https://github.com/MagicStack/httptools) in python (also anything that works with HTTP will have some sort of parser) |
-| Data Sanitization | Removing parts of an input that might cause undesirable behaviour | Cleaning text that comes in from a comment that could be interpreted as HTML so it doesn't render as HTML when people visit the comments later | 
-| ... | ... | ... |
+| Data Sanitization | Removing parts of an input that might cause undesirable behaviour | Cleaning text that comes in from a comment that could be interpreted as HTML so it doesn't render as HTML when people visit the comments later |
 
 ## What is regex?
 
@@ -68,6 +67,8 @@ get_words_before_apple(test_input)
 1.  There are a ton of whitespace bugs, along with other logical errors
 2.  A regular expression would be much smaller, and likely easier to understand (`^(.*)apple.*`)
 
+That being said keep in mind that pattern matching in general is not always super simple, and most of the code, and regex you see initially had bugs when I wrote it. Any pattern matching is a great time to write tests, because trying to find ways to break your patterns leads you to improving them!
+
 **Regex**
 
 | Pros | Cons |
@@ -75,6 +76,7 @@ get_words_before_apple(test_input)
 | Universal accross languages | Used in tons of applications beyond just in programming languages (file+folder organization, searching etc.) |
 | Syntax stays the same, so other people can help debug if they're familiar with it | large learning curve initially |
 | It is often faster than the iterative approach because the language will optimize the module/package for regex | The more clever the pattern, usually the more difficult it is to understand |
+| There are tons of tools to help you write regex | You often need tools to understand a regex pattern |
 
 *When to use*
 
@@ -86,16 +88,17 @@ Additionally it can be used for more than just pattern matching in programs, reg
 - Organizing files + folders
 - Searching & replacing in text editing applications (like [vs code](https://learn.microsoft.com/en-us/visualstudio/ide/using-regular-expressions-in-visual-studio?view=vs-2022))
 
-**Iterative Approach (TODO)**
+**Iterative Approach**
 
-| Pros | Cons | When to use |
-|------|------|-------------|
-|..|...|...|
+| Pros | Cons |
+|------|------|
+| No special pattern-matching language knowledge required | Often slower than regex because regex modules are often highly optimized |
+| For super simple patterns it's often easier to reason about| Complex patterns become very hard to reason about often |
 
 
-This works fine in python, but in lots of other languages you tend to itterate **per letter**. 
+This works fine in python, but in lots of other languages you tend to itterate **per letter**. Regardless of which you choose to go with in your code I will cover options for both in the rest of the article.
 
-## Getting file lists (TODO)
+## Getting file lists
 
 There are two more attributes we have added to the `Server` class, `file_list` and `urls`. `file_list` is a list of all the paths of files in `Server.proxy_directory`, and URL's are going to be the URL's that correspond to each file. The code for this can be found in `Server.__post_init__()`, and in this section we will describe how we generate `Server.file_list`.
 
@@ -163,15 +166,15 @@ print(urls) # {'/about.html': '/site/about.html', '/about': '/site/about.html', 
 
 The actual implementation can be found in `Server.__post_init__()`.
 
-## Matching headers (TODO)
+## Matching headers
 
-...
+Our first task is to create a pattern to match headers, this will be important for requests and responses, here is the regex for doing this: 
 
 ![](./../images/Post%202/regex-http-headers.png)
 
 [Link to regex101](https://regex101.com/r/9IHYxj/2)
 
-You can do this with normal strings in python like this:
+So essentially for each match group 1 is the header name, and group 2 is the header value. We can then assign that into a dictionary using group 1 as the key, and group 2 as the value. You can do this with normal strings in python like this:
 
 ```python
 response = """HTTP/1.1 200 OK
@@ -198,24 +201,88 @@ for line in response:
 print(headers) # {'Content-Type': ' text/html; charset=utf-8', 'Server': ' hhttpp'}
 ```
 
-## Parsing Requests (TODO)
+But keep in mind this iterative approach can have bugs if someone sends a header to the server that is malformed.
 
-...
+## Parse content
 
+For requests and responses we will need the content if it's there. Luckily this is pretty easy. Content comes after headers and **must** have at least 1 empty line between the headers and content.
 
-### Parsing first line of request (TODO)
+With this one we will need a flag. A flag lets you change the functionality of regex, in our case we must set the `/s` flag, which will allow us to select multiple lines of content. Here is the regex that works to get this content:
 
-`(.*){3,4} (\/.*) HTTP\/(\d\.\d)`
+![](./../images/Post%202/regex-http-response-content.png)
 
+[Link to regex101](https://regex101.com/r/YDue2M/1)
 
-## Parsing Responses (TODO)
+You can do this with normal strings in python like this:
 
-... 
+```python
+response = """HTTP/1.1 200 OK
+Content-Type: text/html; charset=utf-8
+Server: hhttpp
 
-Now that we can parse headers and requests, let's look at how we should interpret responses. This won't really matter for our features, but it will be handy for testing later.
+<!DOCTYPE HTML>
+<html><body>
+<h1>Hello, World!</h1>
+</body></html>
+"""
 
+# Convert response to list of each line and skip the first line
+response = response.split("\n")[1::]
 
-### Check first line of response (TODO)
+for index, line in enumerate(response):
+    if not line: # Empty line means content starts
+        # Recreate HTML joining each line with a newline at the end
+        content = "\n".join(response[index+1::])
+        break # end loop
+
+print(content)
+```
+
+## Parsing Requests
+
+The main thing we will have to deal with is parsing a request and generating responses. So let's look at how we will do this.
+
+### Parsing first line of request
+
+The first line of a request is incredibly important, it contains information about the method used, the slug and the HTTP version. So we need a regex pattern to capture all this information:
+
+![](./../images/Post%202/regex-first-line-of-http-request.png)
+
+[Link to regex 101](https://regex101.com/r/5UF0Re/1)
+
+You can do this with normal strings in python like this:
+
+```python
+request = """GET /img/low-poly-ice-caps.jpg HTTP/1.1
+Content-Type: text/html; charset=utf-8
+Server: hhttpp
+
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <h1>Hello, World!</h1>
+    </body>
+</html>
+"""
+# Convert response to list of each line
+request = request.split("\n")
+
+# Split the first line by spaces, and assign to variables
+method, slug, version = request[0].split(" ")
+
+# Convert values to different types (this will throw errors if mistakes are made in the response)
+version = float(version.replace("HTTP/",""))
+
+print(f"{method=}, {slug=}, {version=}")
+```
+
+## Parsing Responses
+
+Now that we can parse headers, content, and requests, let's look at how we should interpret responses. This won't really matter for our features, but it will be handy for testing later.
+
+### Check first line of response
+
+The first line of the response will have details about a response. As I mentioned this has no purpose in our code, but here is what you would need to do it:
 
 ![](./../images/Post%202/regex-first-line-of-http-response.png)
 
@@ -247,42 +314,10 @@ status_code = int(status_code)
 print(f"{header_version=}, {status_code=}, {response_description=}")
 ```
 
-### Find content (TODO)
-
-With this one we also must set the `/s` flag, which will allow us to select multiple lines of content.
-
-![](./../images/Post%202/regex-http-response-content.png)
-
-[Link to regex101](https://regex101.com/r/YDue2M/1)
-
-You can do this with normal strings in python like this:
-
-```python
-response = """HTTP/1.1 200 OK
-Content-Type: text/html; charset=utf-8
-Server: hhttpp
-
-<!DOCTYPE HTML>
-<html><body>
-<h1>Hello, World!</h1>
-</body></html>
-"""
-
-# Convert response to list of each line and skip the first line
-response = response.split("\n")[1::]
-
-for index, line in enumerate(response):
-    if not line: # Empty line means content starts
-        # Recreate HTML joining each line with a newline at the end
-        content = "\n".join(response[index+1::])
-        break # end loop
-
-print(content)
-```
-
-
 ## More resources
 
 - [Interactive introduction to regex](https://regexone.com/lesson/introduction_abcs)
 - [regex 101; Great tool for writing regex](https://regex101.com/)
+- [Regexper; online visualizer for regex](https://regexper.com/)
+- [debuggex; An online debugger for regex](https://www.debuggex.com/)
 
