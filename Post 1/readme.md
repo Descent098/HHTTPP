@@ -435,3 +435,4 @@ Response
 - [RFC-4229 Official Header Fields HTTP](https://datatracker.ietf.org/doc/html/rfc4229)
 - [HTTPie (header visualizer)](https://httpie.io/)
 - [CURL online headers](https://tools.keycdn.com/curl)
+- [Explaining HTTP (video)](https://www.youtube.com/watch?v=SzSXHv8RKdM)

@@ -223,10 +223,11 @@ class Server:
     def __post_init__(self):
         proxy_dir = os.path.abspath(self.proxy_directory)
 
-        self.file_list = [
-            f"{os.path.join(proxy_dir, file)}" 
-            for file in glob.iglob(os.path.join(proxy_dir, '**',"*.*"), recursive=True)
-        ]
+        if not self.file_list:
+            self.file_list = [
+                f"{os.path.join(proxy_dir, file)}" 
+                for file in glob.iglob(os.path.join(proxy_dir, '**',"*.*"), recursive=True)
+            ]
         
         # Create URL list from file_list
         urls = dict()
@@ -289,7 +290,6 @@ class Server:
         content = parse_content(input_text)
         
         # Combine info to create request object
-        ## TODO: Fix hostname
         result = Request("schulichignite.com", slug, method, content = content, headers=headers)
 
         if len(self.logs) >= self.log_limit:
