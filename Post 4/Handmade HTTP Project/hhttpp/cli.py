@@ -1,11 +1,16 @@
 # This file will house the code for the CLI (command line interface)
-import os
-import socket
-from random import randint
 
-from hhttpp import __version__
-from hhttpp.classes import Server
-from docopt import docopt # Used for argument parsing
+# Python Standard Library dependencies
+import os                           # Used to validate paths
+import socket                       # Used to validate ports
+from random import randint          # Provides a random integer between a range
+
+# Internal Dependencies
+from hhttpp import __version__      # Get the current hhttpp version
+from hhttpp.classes import Server   # Used to instantiate hhttpp Server's
+
+# Third Party Dependencies
+from docopt import docopt           # Used for argument parsing
 
 usage = """hhttpp
 
