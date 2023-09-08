@@ -67,7 +67,7 @@ get_words_before_apple(test_input)
 1.  There are a ton of whitespace bugs, along with other logical errors
 2.  A regular expression would be much smaller, and likely easier to understand (`^(.*)apple.*`)
 
-That being said keep in mind that pattern matching in general is not [always super simple](https://www.youtube.com/watch?v=DDe-S3uef2w) ([writeup on this case](https://blog.cloudflare.com/details-of-the-cloudflare-outage-on-july-2-2019/), [another relevant article](https://blog.codinghorror.com/regular-expressions-now-you-have-two-problems/), and most of the code, and regex you see initially had bugs when I wrote it. Any pattern matching is a great time to write tests, because trying to find ways to break your patterns leads you to improving them!
+That being said keep in mind that pattern matching in general is not [always super simple](https://www.youtube.com/watch?v=DDe-S3uef2w) ([writeup on this case](https://blog.cloudflare.com/details-of-the-cloudflare-outage-on-july-2-2019/), [another relevant article](https://blog.codinghorror.com/regular-expressions-now-you-have-two-problems/)), and most of the code, and regex you see initially had bugs when I wrote it. Any pattern matching is a great time to write tests, because trying to find ways to break your patterns leads you to improving them!
 
 **Regex**
 
