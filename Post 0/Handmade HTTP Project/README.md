@@ -2,7 +2,7 @@
 
 *Free range artisnal HTTP*
 
-HHTTPP is an educational tool that is part of a series of blog posts being made to help teach about HTTP servers, and how to build one from scratch in python. The goals of the project are to build a package that:
+HHTTPP is an educational tool that is part of [a series of blog posts](https://github.com/Descent098/HHTTPP?tab=readme-ov-file#order-of-development) being made to help teach about HTTP servers, and how to build one from scratch in python. The goals of the project are to build a package that:
 
 1. Can be installed from pip (uploaded to pypi)
 2. Can do all basic types of requests and responses (not every response code supported)
