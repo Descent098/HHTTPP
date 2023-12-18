@@ -21,13 +21,13 @@ In order to get things to work we will first implement the HTTP information **wi
 
 So the series will roughly be in this order for the posts (0 is this post):
 
-0. Getting the project setup; Getting the boring python packaging bits out of the way
-1. Create request and response objects to house our info
+0. [Getting the project setup; Getting the boring python packaging bits out of the way](https://schulichignite.com/blog/hhttpp/series-introduction/)
+1. [Create request and response objects to house our info](https://schulichignite.com/blog/hhttpp/setting-up-http-protocol/)
    - Status codes
    - MIME types
-2. Use request and response objects to generate proper request/response headers and content encoding
-3. Implementing the networking portion
-4. Definining a CLI (command line interface); Lets people use our system more easily
+2. [Use request and response objects to generate proper request/response headers and content encoding](https://schulichignite.com/blog/hhttpp/parsing-requests-responses/)
+3. [Implementing the networking portion](https://schulichignite.com/blog/hhttpp/implementing-the-networking-portion/)
+4. [Definining a CLI (command line interface); Lets people use our system more easily](https://schulichignite.com/blog/hhttpp/creating-the-cli/)
 
 ## Terms & Concepts
 
@@ -49,7 +49,7 @@ Some of the most important terms we need to understand are what makes up a URL. 
 For those of you that can't read the image, this is the basic anatomy of a URL:
 
 ```
-<protocol>://<domain/hostname/ip>:<port(optional)><slug/URI>
+<protocol>://<domain/hostname/ip>:<port(optional)>/<slug/URI>
 ```
 
 For example here are some URL's:
